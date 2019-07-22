@@ -24,6 +24,18 @@
   revision = "4b04f26287a67f2b08e92187fc03e7946f8f99f7"
 
 [[projects]]
+  digest = "1:60b1695f63dd8f2427bebfd8fe9fc96b61b268fefa48b26ba6c74e23ef18785f"
+  name = "code.cloudfoundry.org/cli"
+  packages = [
+    "api/uaa",
+    "api/uaa/constant",
+    "api/uaa/internal",
+  ]
+  pruneopts = "NUT"
+  revision = "29d6257f1a0acdb6182f8d1faaf89a37de552434"
+  version = "v6.46.0"
+
+[[projects]]
   digest = "1:41531922c7f47d5157308b4dd1abc6142c4c583845ce424ed9664db867fa48cf"
   name = "code.cloudfoundry.org/clock"
   packages = [
@@ -101,12 +113,12 @@
   version = "1.1"
 
 [[projects]]
-  digest = "1:aba270497eb2d49f5cba6f4162d524b9a1195a24cbce8be20bf56a0051f47deb"
+  digest = "1:45c41cd27a8d986998680bfc86da0bbff5fa4f90d0f446c00636c8b099028ffe"
   name = "github.com/blang/semver"
   packages = ["."]
   pruneopts = "NUT"
-  revision = "2ee87856327ba09384cabd113bc6b5d174e9ec0f"
-  version = "v3.5.1"
+  revision = "ba2c2ddd89069b46a7011d4106f6868f17ee1705"
+  version = "v3.6.1"
 
 [[projects]]
   digest = "1:69b95d47eef70cba62af2aa3d33bd5f9ffe9fa0be66d79d79150c38796c6eac1"
