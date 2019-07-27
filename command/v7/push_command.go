@@ -37,9 +37,10 @@ type ProgressBar interface {
 //go:generate counterfeiter . PushActor
 
 type PushActor interface {
+	PrepareManifest(baseManifest v7pushaction.ParsedManifest, flagOverrides v7pushaction.FlagOverrides) (v7pushaction.ParsedManifest, error)
 	CreatePushPlans(appNameArg string, spaceGUID string, orgGUID string, parser v7pushaction.ManifestParser, overrides v7pushaction.FlagOverrides) ([]v7pushaction.PushPlan, error)
 	// Prepare the space by creating needed apps/applying the manifest
-	PrepareSpace(pushPlans []v7pushaction.PushPlan, parser v7pushaction.ManifestParser) ([]string, <-chan *v7pushaction.PushEvent)
+	PrepareSpace(spaceGUID string, parser v7pushaction.ParsedManifest) <-chan *v7pushaction.PushEvent
 	// UpdateApplicationSettings figures out the state of the world.
 	UpdateApplicationSettings(pushPlans []v7pushaction.PushPlan) ([]v7pushaction.PushPlan, v7pushaction.Warnings, error)
 	// Actualize applies any necessary changes.
@@ -58,6 +59,7 @@ type V7ActorForPush interface {
 
 type ManifestParser interface {
 	v7pushaction.ManifestParser
+	GetManifest(noManifest bool, pathToManifest string, pathsToVarsFiles []string, vars []template.VarKV) (v7pushaction.ParsedManifest, error)
 	ContainsMultipleApps() bool
 	InterpolateAndParse(pathToManifest string, pathsToVarsFiles []string, vars []template.VarKV, appName string) error
 	ContainsPrivateDockerImages() bool
@@ -146,18 +148,30 @@ func (cmd PushCommand) Execute(args []string) error {
 		return err
 	}
 
-	if !cmd.NoManifest {
-		if err = cmd.ReadManifest(); err != nil {
-			return err
-		}
+	// If single app and appName != manifest appName change the name in the manifest
+	// If multiapp and appName is not manifest error
+	// If multiapp and appName is in manifest return just that app in a manifest
+	// If multiapp and no appName return the full manifest
+	// If no manifest and appName return manifest with empty App
+	// if no manifest and no appName blow up
+	manifestPath, err := cmd.ReadManifest()
+
+	var pathsToVarsFiles []string
+	for _, varfilepath := range cmd.PathsToVarsFiles {
+		pathsToVarsFiles = append(pathsToVarsFiles, string(varfilepath))
 	}
 
-	err = cmd.ValidateFlags()
+	baseManifest, err := cmd.ManifestParser.GetManifest(cmd.NoManifest, manifestPath, pathsToVarsFiles, cmd.Vars)
 	if err != nil {
 		return err
 	}
 
 	flagOverrides, err := cmd.GetFlagOverrides()
+	if err != nil {
+		return err
+	}
+
+	err = cmd.ValidateFlags()
 	if err != nil {
 		return err
 	}
@@ -172,62 +186,69 @@ func (cmd PushCommand) Execute(args []string) error {
 		return err
 	}
 
-	pushPlans, err := cmd.Actor.CreatePushPlans(
-		cmd.OptionalArgs.AppName,
-		cmd.Config.TargetedSpace().GUID,
-		cmd.Config.TargetedOrganization().GUID,
-		cmd.ManifestParser,
-		flagOverrides,
-	)
+	parsedManifest, err := cmd.Actor.PrepareManifest(baseManifest, flagOverrides)
 	if err != nil {
 		return err
 	}
 
-	appNames, eventStream := cmd.Actor.PrepareSpace(pushPlans, cmd.ManifestParser)
+	eventStream := cmd.Actor.PrepareSpace(cmd.Config.TargetedSpace().GUID, parsedManifest)
 	err = cmd.eventStreamHandler(eventStream)
 
-	if err != nil {
-		return err
-	}
-
-	if len(appNames) == 0 {
-		return translatableerror.AppNameOrManifestRequiredError{}
-	}
-
-	user, err := cmd.Config.CurrentUser()
-	if err != nil {
-		return err
-	}
-
-	cmd.announcePushing(appNames, user)
-
-	cmd.UI.DisplayText("Getting app info...")
-	log.Info("generating the app plan")
-
-	pushPlans, warnings, err := cmd.Actor.UpdateApplicationSettings(pushPlans)
-	cmd.UI.DisplayWarnings(warnings)
-	if err != nil {
-		return err
-	}
-	log.WithField("number of plans", len(pushPlans)).Debug("completed generating plan")
-
-	for _, plan := range pushPlans {
-		log.WithField("app_name", plan.Application.Name).Info("actualizing")
-		eventStream := cmd.Actor.Actualize(plan, cmd.ProgressBar)
-		err := cmd.eventStreamHandler(eventStream)
-
-		if cmd.shouldDisplaySummary(err) {
-			summaryErr := cmd.displayAppSummary(plan)
-			if summaryErr != nil {
-				return summaryErr
-			}
-		}
-		if err != nil {
-			return cmd.mapErr(plan.Application.Name, err)
-		}
-	}
-
 	return nil
+
+	//pushPlans, err := cmd.Actor.CreatePushPlans(
+	//	cmd.OptionalArgs.AppName,
+	//	cmd.Config.TargetedSpace().GUID,
+	//	cmd.Config.TargetedOrganization().GUID,
+	//	cmd.ManifestParser,
+	//	flagOverrides,
+	//)
+	//if err != nil {
+	//	return err
+	//}
+	//
+	//if err != nil {
+	//	return err
+	//}
+	//
+	//if len(appNames) == 0 {
+	//	return translatableerror.AppNameOrManifestRequiredError{}
+	//}
+	//
+	//user, err := cmd.Config.CurrentUser()
+	//if err != nil {
+	//	return err
+	//}
+	//
+	//cmd.announcePushing(appNames, user)
+	//
+	//cmd.UI.DisplayText("Getting app info...")
+	//log.Info("generating the app plan")
+	//
+	//pushPlans, warnings, err := cmd.Actor.UpdateApplicationSettings(pushPlans)
+	//cmd.UI.DisplayWarnings(warnings)
+	//if err != nil {
+	//	return err
+	//}
+	//log.WithField("number of plans", len(pushPlans)).Debug("completed generating plan")
+	//
+	//for _, plan := range pushPlans {
+	//	log.WithField("app_name", plan.Application.Name).Info("actualizing")
+	//	eventStream := cmd.Actor.Actualize(plan, cmd.ProgressBar)
+	//	err := cmd.eventStreamHandler(eventStream)
+	//
+	//	if cmd.shouldDisplaySummary(err) {
+	//		summaryErr := cmd.displayAppSummary(plan)
+	//		if summaryErr != nil {
+	//			return summaryErr
+	//		}
+	//	}
+	//	if err != nil {
+	//		return cmd.mapErr(plan.Application.Name, err)
+	//	}
+	//}
+	//
+	//return nil
 }
 
 func (cmd PushCommand) shouldDisplaySummary(err error) bool {
@@ -404,11 +425,11 @@ func (cmd PushCommand) getLogs(logStream <-chan *v7action.LogMessage, errStream 
 	}
 }
 
-func (cmd PushCommand) ReadManifest() error {
+func (cmd PushCommand) ReadManifest() (string, error) {
 	log.Info("reading manifest if exists")
-	pathsToVarsFiles := []string{}
-	for _, varfilepath := range cmd.PathsToVarsFiles {
-		pathsToVarsFiles = append(pathsToVarsFiles, string(varfilepath))
+
+	if cmd.PathToManifest != "" {
+		return string(cmd.PathToManifest), nil
 	}
 
 	readPath := cmd.PWD
@@ -417,27 +438,13 @@ func (cmd PushCommand) ReadManifest() error {
 		readPath = string(cmd.PathToManifest)
 	}
 
-	pathToManifest, exists, err := cmd.ManifestLocator.Path(readPath)
-	if err != nil {
-		return err
-	}
-
-	if exists {
-		log.WithField("manifestPath", pathToManifest).Debug("path to manifest")
-		err = cmd.ManifestParser.InterpolateAndParse(pathToManifest, pathsToVarsFiles, cmd.Vars, cmd.OptionalArgs.AppName)
-		if err != nil {
-			log.Errorln("reading manifest:", err)
-			return err
-		}
-
-		cmd.UI.DisplayText("Using manifest file {{.Path}}", map[string]interface{}{"Path": pathToManifest})
-	}
-
-	return nil
+	path, _, err := cmd.ManifestLocator.Path(readPath)
+	return path, err
 }
 
 func (cmd PushCommand) GetFlagOverrides() (v7pushaction.FlagOverrides, error) {
 	return v7pushaction.FlagOverrides{
+		AppName:             cmd.OptionalArgs.AppName,
 		Buildpacks:          cmd.Buildpacks,
 		Stack:               cmd.Stack,
 		Disk:                cmd.Disk.NullUint64,

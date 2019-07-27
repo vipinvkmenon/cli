@@ -45,6 +45,7 @@ type PushPlan struct {
 }
 
 type FlagOverrides struct {
+	AppName             string
 	Buildpacks          []string
 	Stack               string
 	Disk                types.NullUint64

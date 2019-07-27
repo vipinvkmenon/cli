@@ -1,0 +1,30 @@
+buildpack -> buildpacks app level key
+disk -> app/web process level configuration
+docker-image -> app.docker.image
+docker-username -> app.docker.username
+endpoint -> app.processes.health-check-http-endpoint/app.health-check-http-endpoint
+health-check-type -> app.process.health-check-type/app.health-check-type
+instances -> app.instances/app.process.instances
+memory -> app.memory/app.process.memory
+no-route -> app.no-route
+random-route -> app.random-route
+stack -> app.stack
+start-command -> app.command/app.process.command
+
+1. locate & parse manifest, or return empty
+2. validate flag overrides + manifest size (i.e. some flags dont work with multi-app manifests)
+3. for each possible flag override (see above):
+  - validate that the flag override is legit given this manifest
+  - modify the in-memory manifest accordingly
+4. add defualt route to manifest if desired
+5. (in future) diff final manifest (send 2 capi & print result)
+6. apply manifest
+7. upload whatever
+8. start app/create deployment/...
+9. poll for completion
+10. display app summary
+
+
+Questions to explore:
+
+ - Can CAPI create a default route??

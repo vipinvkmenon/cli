@@ -16,6 +16,7 @@ type Actor struct {
 	SharedActor SharedActor
 	V7Actor     V7Actor
 
+	UpdateManifestSequence    []UpdateManifestFunc
 	PreparePushPlanSequence   []UpdatePushPlanFunc
 	ChangeApplicationSequence func(plan PushPlan) []ChangeApplicationFunc
 	RandomWordGenerator       RandomWordGenerator
@@ -27,6 +28,8 @@ type Actor struct {
 const ProtocolRegexp = "^https?://|^tcp://"
 const URLRegexp = "^(?:https?://|tcp://)?(?:(?:[\\w-]+\\.)|(?:[*]\\.))+\\w+(?:\\:\\d+)?(?:/.*)*(?:\\.\\w+)?$"
 
+type UpdateManifestFunc func(manifest ParsedManifest, overrides FlagOverrides) (ParsedManifest, error)
+
 // NewActor returns a new actor.
 func NewActor(v3Actor V7Actor, sharedActor SharedActor) *Actor {
 	actor := &Actor{
@@ -36,6 +39,11 @@ func NewActor(v3Actor V7Actor, sharedActor SharedActor) *Actor {
 		RandomWordGenerator: new(randomword.Generator),
 		startWithProtocol:   regexp.MustCompile(ProtocolRegexp),
 		urlValidator:        regexp.MustCompile(URLRegexp),
+	}
+
+	actor.UpdateManifestSequence = []UpdateManifestFunc{
+		UpdateManifestWithAppName,
+		UpdateManifestWithBuildpacks,
 	}
 
 	actor.PreparePushPlanSequence = []UpdatePushPlanFunc{
@@ -61,4 +69,49 @@ func NewActor(v3Actor V7Actor, sharedActor SharedActor) *Actor {
 	}
 
 	return actor
+}
+
+func (actor Actor) PrepareManifest(baseManifest ParsedManifest, flagOverrides FlagOverrides) (ParsedManifest, error) {
+	parsedManifest := baseManifest
+
+	for _, updateManifestFunc := range actor.UpdateManifestSequence {
+		var err error
+
+		parsedManifest, err = updateManifestFunc(parsedManifest, flagOverrides)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return parsedManifest, nil
+}
+
+func UpdateManifestWithAppName(manifest ParsedManifest, overrides FlagOverrides) (ParsedManifest, error) {
+	appName := overrides.AppName
+
+	if !manifest.HasMultipleApps() && appName != "" {
+		return manifest.OverrideFirstAppName(appName), nil
+	}
+
+	if appName != "" {
+		return manifest.ForApp(appName)
+	}
+
+	return manifest, nil
+}
+
+func UpdateManifestWithBuildpacks(manifest ParsedManifest, overrides FlagOverrides) (ParsedManifest, error) {
+	if manifest.HasMultipleApps() {
+		return manifest, nil
+	}
+
+	return manifest.OverrideFirstAppBuildpacks(overrides.Buildpacks), nil
+}
+
+func UpdateManifestWithStack(manifest ParsedManifest, overrides FlagOverrides) (ParsedManifest, error) {
+	if manifest.HasMultipleApps() {
+		return manifest, nil
+	}
+
+	return manifest.OverrideFirstAppStack(overrides.Stack), nil
 }
