@@ -10,55 +10,29 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-type Parser struct {
-	Applications []Application
-
-	pathToManifest string
-	rawManifest    []byte
-	validators     []validatorFunc
-	hasParsed      bool
-}
+// TODO I dont think this needs state if we just treat it as a way
+// to change manifest struct <-> bytes
+type Parser struct{}
 
 func NewParser() *Parser {
 	return new(Parser)
 }
 
-func (parser Parser) AppNames() []string {
-	var names []string
-	for _, app := range parser.Applications {
-		names = append(names, app.Name)
+func (parser *Parser) GetManifest(noManifest bool, pathToManifest string, pathsToVarsFiles []string, vars []template.VarKV) (Manifest, error) {
+	if noManifest || pathToManifest == "" {
+		return Manifest{Applications: []Application{{}}}, nil
 	}
-	return names
+
+	return parser.InterpolateAndParse(pathToManifest, pathsToVarsFiles, vars)
 }
 
-func (parser Parser) Apps() []Application {
-	return parser.Applications
+// This should marshal the manifest and return the bytes
+func (parser *Parser) MarshallManifest(manifest Manifest) ([]byte, error) {
+	return yaml.Marshal(manifest)
 }
 
-func (parser Parser) ContainsManifest() bool {
-	return parser.hasParsed
-}
-
-func (parser Parser) ContainsMultipleApps() bool {
-	return len(parser.Applications) > 1
-}
-
-func (parser Parser) ContainsPrivateDockerImages() bool {
-	for _, app := range parser.Applications {
-		if app.Docker != nil && app.Docker.Username != "" {
-			return true
-		}
-	}
-	return false
-}
-
-func (parser Parser) FullRawManifest() []byte {
-	return parser.rawManifest
-}
-
-func (parser Parser) GetPathToManifest() string {
-	return parser.pathToManifest
-}
+// TODO: make this private push should enter through get manifest
+// and apply manifest should error if there is not path so it shouldnt reach this point
 
 // InterpolateAndParse reads the manifest at the provided paths, interpolates
 // variables if a vars file is provided, and sets the current manifest to the
@@ -68,10 +42,10 @@ func (parser Parser) GetPathToManifest() string {
 // For manifests with multiple applications, appName will filter the
 // applications and leave only a single application in the resulting parsed
 // manifest structure.
-func (parser *Parser) InterpolateAndParse(pathToManifest string, pathsToVarsFiles []string, vars []template.VarKV, appName string) error {
+func (parser *Parser) InterpolateAndParse(pathToManifest string, pathsToVarsFiles []string, vars []template.VarKV) (Manifest, error) {
 	rawManifest, err := ioutil.ReadFile(pathToManifest)
 	if err != nil {
-		return err
+		return Manifest{}, err
 	}
 
 	tpl := template.NewTemplate(rawManifest)
@@ -87,7 +61,7 @@ func (parser *Parser) InterpolateAndParse(pathToManifest string, pathsToVarsFile
 
 		err = yaml.Unmarshal(rawVarsFile, &sv)
 		if err != nil {
-			return InvalidYAMLError{Err: err}
+			return Manifest{}, InvalidYAMLError{Err: err}
 		}
 
 		for k, v := range sv {
@@ -101,86 +75,51 @@ func (parser *Parser) InterpolateAndParse(pathToManifest string, pathsToVarsFile
 
 	rawManifest, err = tpl.Evaluate(fileVars, nil, template.EvaluateOpts{ExpectAllKeys: true})
 	if err != nil {
-		return InterpolationError{Err: err}
+		return Manifest{}, InterpolationError{Err: err}
 	}
 
-	parser.pathToManifest = pathToManifest
-	return parser.parse(rawManifest, appName)
+	return parser.parse(rawManifest, pathToManifest)
 }
 
-func (parser Parser) RawAppManifest(appName string) ([]byte, error) {
-	var appManifest manifest
-	for _, app := range parser.Applications {
-		if app.Name == appName {
-			appManifest.Applications = []Application{app}
-			return yaml.Marshal(appManifest)
-		}
-	}
-	return nil, AppNotInManifestError{Name: appName}
-}
+// TODO I removed name presence validation in this method we need to validate somewhere else
+// It felt weird for the parser to know about an appName. It should just read in a manifest
+// and push will do its own validations
 
-func (parser *Parser) parse(manifestBytes []byte, appName string) error {
-	parser.rawManifest = manifestBytes
-	pathToManifest := parser.GetPathToManifest()
-	var raw manifest
+// TODO comapre to master and make sure we didnt lost any validation coverage from
+// trimming this down
+func (parser *Parser) parse(manifestBytes []byte, pathToManifest string) (Manifest, error) {
+	var manifestStruct Manifest
 
-	err := yaml.Unmarshal(manifestBytes, &raw)
+	err := yaml.Unmarshal(manifestBytes, &manifestStruct)
 	if err != nil {
-		return err
+		return Manifest{}, err
 	}
 
-	if len(raw.Applications) == 0 {
-		return errors.New("must have at least one application")
+	if len(manifestStruct.Applications) == 0 {
+		return Manifest{}, errors.New("must have at least one application")
 	}
 
-	if len(raw.Applications) == 1 && appName != "" {
-		raw.Applications[0].Name = appName
-		raw.Applications[0].FullUnmarshalledApplication["name"] = appName
-	}
+	for i := range manifestStruct.Applications {
 
-	filteredIndex := -1
-
-	for i := range raw.Applications {
-		if raw.Applications[i].Name == "" {
-			return errors.New("Found an application with no name specified")
-		}
-
-		if raw.Applications[i].Name == appName {
-			filteredIndex = i
-		}
-
-		if raw.Applications[i].Path == "" {
+		if manifestStruct.Applications[i].Path == "" {
 			continue
 		}
 
-		var finalPath = raw.Applications[i].Path
+		var finalPath = manifestStruct.Applications[i].Path
 		if !filepath.IsAbs(finalPath) {
 			finalPath = filepath.Join(filepath.Dir(pathToManifest), finalPath)
 		}
 		finalPath, err = filepath.EvalSymlinks(finalPath)
 		if err != nil {
 			if os.IsNotExist(err) {
-				return InvalidManifestApplicationPathError{
-					Path: raw.Applications[i].Path,
+				return Manifest{}, InvalidManifestApplicationPathError{
+					Path: manifestStruct.Applications[i].Path,
 				}
 			}
-			return err
+			return Manifest{}, err
 		}
-		raw.Applications[i].Path = finalPath
+		manifestStruct.Applications[i].Path = finalPath
 	}
 
-	if filteredIndex >= 0 {
-		raw.Applications = []Application{raw.Applications[filteredIndex]}
-	} else if appName != "" {
-		return AppNotInManifestError{Name: appName}
-	}
-
-	parser.Applications = raw.Applications
-	parser.rawManifest, err = yaml.Marshal(raw)
-	if err != nil {
-		return err
-	}
-
-	parser.hasParsed = true
-	return nil
+	return manifestStruct, nil
 }

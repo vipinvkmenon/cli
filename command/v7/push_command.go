@@ -68,7 +68,7 @@ type ManifestParser interface {
 //go:generate counterfeiter . ManifestLocator
 
 type ManifestLocator interface {
-	Path(filepathOrDirectory string) (string, bool, error)
+	GetReadPath(path string) (string, error)
 }
 
 type PushCommand struct {
@@ -148,53 +148,72 @@ func (cmd PushCommand) Execute(args []string) error {
 		return err
 	}
 
+	// Check flag override combos (ignoring manifest)
+
 	// If single app and appName != manifest appName change the name in the manifest
 	// If multiapp and appName is not manifest error
 	// If multiapp and appName is in manifest return just that app in a manifest
 	// If multiapp and no appName return the full manifest
 	// If no manifest and appName return manifest with empty App
 	// if no manifest and no appName blow up
-	manifestPath, err := cmd.ReadManifest()
+	initialPath := cmd.PWD
+	if cmd.PathToManifest != "" {
+		initialPath = string(cmd.PathToManifest)
+	}
+
+	manifestReadPath, err := cmd.ManifestLocator.GetReadPath(initialPath)
+	if err != nil {
+		return err
+	}
 
 	var pathsToVarsFiles []string
 	for _, varfilepath := range cmd.PathsToVarsFiles {
 		pathsToVarsFiles = append(pathsToVarsFiles, string(varfilepath))
 	}
 
-	baseManifest, err := cmd.ManifestParser.GetManifest(cmd.NoManifest, manifestPath, pathsToVarsFiles, cmd.Vars)
+	baseManifest, err := cmd.ManifestParser.GetManifest(cmd.NoManifest, manifestReadPath, pathsToVarsFiles, cmd.Vars)
 	if err != nil {
 		return err
 	}
 
-	flagOverrides, err := cmd.GetFlagOverrides()
-	if err != nil {
-		return err
-	}
+	// 1. Override appName (do this first to let us fill in missing app names/trim)
+	// 2. validate the manifest (check all apps have names, maybe move path validation here
+	//    and any other validations oved out of the parse function)
+	// 3. Validate each flag override against manifest value combo and apply
 
-	err = cmd.ValidateFlags()
-	if err != nil {
-		return err
-	}
+	// 4. apply the manifest
+	// 5. create push plans from manifest + non app config flags (ie: rolling/no-start)
+	// 6. maintain conceptualize and actualize to use push plans (but trim down steps)
 
-	err = cmd.ValidateAllowedFlagsForMultipleApps(cmd.ManifestParser.ContainsMultipleApps())
-	if err != nil {
-		return err
-	}
+	// flagOverrides, err := cmd.GetFlagOverrides()
+	// if err != nil {
+	// 	return err
+	// }
 
-	flagOverrides.DockerPassword, err = cmd.GetDockerPassword(flagOverrides.DockerUsername, cmd.ManifestParser.ContainsPrivateDockerImages())
-	if err != nil {
-		return err
-	}
+	// err = cmd.ValidateFlags()
+	// if err != nil {
+	// 	return err
+	// }
 
-	parsedManifest, err := cmd.Actor.PrepareManifest(baseManifest, flagOverrides)
-	if err != nil {
-		return err
-	}
+	// err = cmd.ValidateAllowedFlagsForMultipleApps(cmd.ManifestParser.ContainsMultipleApps())
+	// if err != nil {
+	// 	return err
+	// }
 
-	eventStream := cmd.Actor.PrepareSpace(cmd.Config.TargetedSpace().GUID, parsedManifest)
-	err = cmd.eventStreamHandler(eventStream)
+	// flagOverrides.DockerPassword, err = cmd.GetDockerPassword(flagOverrides.DockerUsername, cmd.ManifestParser.ContainsPrivateDockerImages())
+	// if err != nil {
+	// 	return err
+	// }
 
-	return nil
+	// parsedManifest, err := cmd.Actor.PrepareManifest(baseManifest, flagOverrides)
+	// if err != nil {
+	// 	return err
+	// }
+
+	// eventStream := cmd.Actor.PrepareSpace(cmd.Config.TargetedSpace().GUID, parsedManifest)
+	// err = cmd.eventStreamHandler(eventStream)
+
+	// return nil
 
 	//pushPlans, err := cmd.Actor.CreatePushPlans(
 	//	cmd.OptionalArgs.AppName,

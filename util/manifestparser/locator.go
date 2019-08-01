@@ -18,39 +18,35 @@ func NewLocator() *Locator {
 	}
 }
 
-func (loc Locator) Path(filepathOrDirectory string) (string, bool, error) {
-	info, err := os.Stat(filepathOrDirectory)
+func (loc Locator) GetReadPath(path string) (string, error) {
+	info, err := os.Stat(path)
 	if os.IsNotExist(err) {
-		return "", false, nil
+		return "", nil
 	} else if err != nil {
-		return "", false, err
+		return "", err
 	}
 
-	resolvedFilepathOrDirectory, err := filepath.EvalSymlinks(filepathOrDirectory)
+	resolvedpath, err := filepath.EvalSymlinks(path)
 	if err != nil {
-		return "", false, err
+		return "", err
 	}
 
 	if info.IsDir() {
-		return loc.handleDir(resolvedFilepathOrDirectory)
+		return loc.handleDir(resolvedpath)
 	}
 
-	return loc.handleFilepath(resolvedFilepathOrDirectory)
+	return resolvedpath, nil
 }
 
-func (loc Locator) handleDir(dir string) (string, bool, error) {
+func (loc Locator) handleDir(dir string) (string, error) {
 	for _, filename := range loc.FilesToCheckFor {
 		fullPath := filepath.Join(dir, filename)
 		if _, err := os.Stat(fullPath); err == nil {
-			return fullPath, true, nil
+			return fullPath, nil
 		} else if !os.IsNotExist(err) {
-			return "", false, err
+			return "", err
 		}
 	}
 
-	return "", false, nil
-}
-
-func (Locator) handleFilepath(filepath string) (string, bool, error) {
-	return filepath, true, nil
+	return "", nil
 }
