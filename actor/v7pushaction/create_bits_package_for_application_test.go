@@ -1,7 +1,9 @@
 package v7pushaction_test
 
 import (
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
 	"errors"
+	"fmt"
 
 	"code.cloudfoundry.org/cli/actor/actionerror"
 	"code.cloudfoundry.org/cli/actor/sharedaction"
@@ -12,6 +14,14 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
+
+func buildEmptyV3Resource(name string) sharedaction.V3Resource {
+	return sharedaction.V3Resource{
+		FilePath:    name,
+		Checksum:    ccv3.Checksum{Value: fmt.Sprintf("checksum-%s", name)},
+		SizeInBytes: 0,
+	}
+}
 
 var _ = Describe("CreateBitsPackageForApplication", func() {
 	var (
@@ -71,6 +81,28 @@ var _ = Describe("CreateBitsPackageForApplication", func() {
 				matches   []sharedaction.V3Resource
 				unmatches []sharedaction.V3Resource
 			)
+
+			When("all resources are empty", func() {
+				BeforeEach(func() {
+					emptyFiles := []sharedaction.V3Resource{
+						buildEmptyV3Resource("empty-filename-1"),
+						buildEmptyV3Resource("empty-filename-2"),
+					}
+
+					paramPlan = PushPlan{
+						Application: v7action.Application{
+							Name: "some-app",
+							GUID: "some-app-guid",
+						},
+						BitsPath:     "/some-bits-path",
+						AllResources: emptyFiles,
+					}
+				})
+
+				FIt("skips resource matching", func() {
+					Expect(fakeV7Actor.ResourceMatchCallCount()).To(Equal(0))
+				})
+			})
 
 			When("there are unmatched resources", func() {
 				BeforeEach(func() {
