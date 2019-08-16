@@ -110,10 +110,10 @@ Follow these download links for [Mac OS X 64 bit](https://packages.cloudfoundry.
 **Mac OS X** and **Linux** using [Homebrew](https://brew.sh/) via the [cloudfoundry tap](https://github.com/cloudfoundry/homebrew-tap):
 
 ```sh
-brew install cloudfoundry/tap/cf-cli
+brew install cloudfoundry/tap/cf7-cli
 ```
 
-**Note:** `cf` tab completion requires `bash-completion` to be installed properly in order to work.
+**Note:** `cf7` tab completion requires `bash-completion` to be installed properly in order to work.
 
 **Debian** and **Ubuntu** based Linux distributions:
 
@@ -123,7 +123,7 @@ wget -q -O - https://packages.cloudfoundry.org/debian/cli.cloudfoundry.org.key |
 echo "deb https://packages.cloudfoundry.org/debian stable main" | sudo tee /etc/apt/sources.list.d/cloudfoundry-cli.list
 # ...then, update your local package index, then finally install the cf CLI
 sudo apt-get update
-sudo apt-get install cf-cli
+sudo apt-get install cf7-cli
 ```
 
 **Enterprise Linux** and **Fedora** systems (RHEL6/CentOS6 and up):
@@ -131,7 +131,7 @@ sudo apt-get install cf-cli
 # ...first configure the Cloud Foundry Foundation package repository
 sudo wget -O /etc/yum.repos.d/cloudfoundry-cli.repo https://packages.cloudfoundry.org/fedora/cloudfoundry-cli.repo
 # ...then, install the cf CLI (which will also download and add the public key to your system)
-sudo yum install cf-cli
+sudo yum install cf7-cli
 ```
 
 ### Installers and compressed binaries
@@ -150,11 +150,11 @@ curl -L "https://packages.cloudfoundry.org/stable?release=macosx64-binary&versio
 # ...or Linux 64-bit binary
 curl -L "https://packages.cloudfoundry.org/stable?release=linux64-binary&version=v7&source=github" | tar -zx
 # ...move it to /usr/local/bin or a location you know is in your $PATH
-mv cf /usr/local/bin
+mv cf7 /usr/local/bin
 # ...copy tab completion file on Ubuntu (takes affect after re-opening your shell)
-sudo curl -o /usr/share/bash-completion/completions/cf https://raw.githubusercontent.com/cloudfoundry/cli/master/ci/installers/completion/cf
+sudo curl -o /usr/share/bash-completion/completions/cf7 https://raw.githubusercontent.com/cloudfoundry/cli/master/ci/installers/completion/cf7
 # ...and to confirm your cf CLI version
-cf --version
+cf7 --version
 ```
 
 #### Edge binaries
