@@ -24,6 +24,8 @@ run:
   - |
     set -ex
 
+    apt-get install jq
+
     tar -zxf edge-linux-binary-64/*.tgz
 
     LATEST_VERSION=$(cat cli/BUILD_VERSION)
@@ -38,4 +40,14 @@ run:
     fi
 
     ./cf set-env claw AVAILABLE_VERSIONS "${CURRENT_VERSIONS},${LATEST_VERSION}"
-    ./cf restage claw
+    DEPLOYMENT_GUID=$(cf curl -X POST /v3/deployments -d '{"relationships": {"app": {"data": {"guid": "'"$(./cf app claw --guid)"'"}}}}' | jq -r .guid)
+
+    NUM_LOOPS=0
+    until [ $NUM_LOOPS -eq 20 ]; do
+      if [ $(./cf curl /v3/deployments/$DEPLOYMENT_GUID | jq -r .status.value) == "FINALIZED"  ]; then
+         exit 0
+      fi
+      ((NUM_LOOPS++))
+      sleep 6
+    done
+    exit 1
