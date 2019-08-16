@@ -162,7 +162,7 @@ Edge binaries are *not intended for wider use*; they're for developers to test n
 Follow these download links for [Mac OS X 64 bit](https://packages.cloudfoundry.org/edge?arch=macosx64&version=v7&source=github), [Windows 64 bit](https://packages.cloudfoundry.org/edge?arch=windows64&version=v7&source=github) and [Linux 64 bit](https://packages.cloudfoundry.org/edge?arch=linux64&version=v7&source=github).
 
 ### Compatibility
-The V7 CLI is developed and tested against CAPI release candidates. The releases are only fully compatible with [Capi RC v<insert-version-here>](<insert-bucket-link-here>) or later.
+The V7 CLI is developed and tested against CAPI release candidates. The releases are only fully compatible with Capi RC [INSERT_VERSION_HERE](LINK_HERE)  or later.
 
 ## Known Issues
 
