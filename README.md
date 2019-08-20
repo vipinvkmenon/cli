@@ -24,20 +24,25 @@
 
 ***Cloud Foundry CLI*** is the official command line client for [Cloud Foundry](https://cloudfoundry.org).
 Latest help of each command is [here](https://cli.cloudfoundry.org) (or run `cf help`);
-Further documentation is at the [docs page for the
-CLI](https://docs.cloudfoundry.org/cf-cli).
 
-**Important Note**: CF CLI supports as far back as CF Release v284/CF Deployment v1.7.0 (CAPI Release: 1.46.0 (APIs 2.100.0 and 3.35.0). See our [wiki](https://github.com/cloudfoundry/cli/wiki/Versioning-Policy#cf-cli-minimum-supported-version) for more information. If you are on an older version of CF Release, we recommend you upgrade to a supported version. 
+Currently, there are two versions of the cf CLI in development: 
+- the supported v6 cf CLI. See [here](https://docs.cloudfoundry.org/cf-cli) for more information. 
+- v7 beta cf CLI which is currently in development and will be in beta mode until it is completely backed by the [v3 API](http://v3-apidocs.cloudfoundry.org/version/3.75.0/index.html). See [here](https://docs.cloudfoundry.org/cf-cli/v7.html) for more information. 
+
+
+**Important Note**: The v6 CF CLI supports as far back as CF Release v284/CF Deployment v1.7.0 (CAPI Release: 1.46.0 (APIs 2.100.0 and 3.35.0). See our [wiki](https://github.com/cloudfoundry/cli/wiki/Versioning-Policy#cf-cli-minimum-supported-version) for more information. If you are on an older version of CF Release, we recommend you upgrade to a supported version. 
+
+**Important Note**: The v7 CF CLI beta under rapid development and as such is tested only against CC API v3 Release Candidate. 
 
 If you have any questions, ask away on the #cli channel in [our Slack
 community](https://slack.cloudfoundry.org/) and the
 [cf-dev](https://lists.cloudfoundry.org/archives/list/cf-dev@lists.cloudfoundry.org/)
 mailing list, or [open a GitHub issue](https://github.com/cloudfoundry/cli/issues/new).  You can follow our development progress
-on [Pivotal Tracker](https://www.pivotaltracker.com/n/projects/892938).
+on [Core CF CLI Pivotal Tracker](https://www.pivotaltracker.com/n/projects/892938) or [v3/v7 CLI VAT Pivotal Tracker](https://www.pivotaltracker.com/n/projects/2196383).
 
 ## Getting Started
 
-Download and install the cf CLI from the [Downloads Section](#downloads).
+Download and install the cf CLI from the [Downloads Section](#downloads) for either the [v6 cf CLI](https://github.com/cloudfoundry/cli/blob/master/README.md#downloading-the-v6-cli) or the [v7 beta cf CLI](https://github.com/cloudfoundry/cli/blob/master/README.md#downloading-the-v7-cli). 
 
 Once installed, you can log in and push an app.
 
@@ -45,9 +50,11 @@ Once installed, you can log in and push an app.
 
 Check out our [community contributed CLI plugins](https://plugins.cloudfoundry.org) to further enhance your CLI experience.
 
-## Downloading the V6 CLI
+## Downloads
 
-### Installing using a package manager
+### Downloading the V6 CLI
+
+#### Installing using a package manager
 
 **Mac OS X** and **Linux** using [Homebrew](https://brew.sh/) via the [cloudfoundry tap](https://github.com/cloudfoundry/homebrew-tap):
 
@@ -76,7 +83,7 @@ sudo wget -O /etc/yum.repos.d/cloudfoundry-cli.repo https://packages.cloudfoundr
 sudo yum install cf-cli
 ```
 
-### Installers and compressed binaries
+#### Installers and compressed binaries
 
 | | Mac OS X 64 bit | Windows 64 bit | Linux 64 bit |
 | :---------------: | :---------------: |:---------------:| :------------:|
@@ -99,13 +106,21 @@ sudo curl -o /usr/share/bash-completion/completions/cf https://raw.githubusercon
 cf --version
 ```
 
-#### Edge binaries
+##### Edge binaries
 Edge binaries are *not intended for wider use*; they're for developers to test new features and fixes as they are 'pushed' and passed through the CI.
 Follow these download links for [Mac OS X 64 bit](https://packages.cloudfoundry.org/edge?arch=macosx64&source=github), [Windows 64 bit](https://packages.cloudfoundry.org/edge?arch=windows64&source=github) and [Linux 64 bit](https://packages.cloudfoundry.org/edge?arch=linux64&source=github).
 
-## Downloading the V7 beta CLI
+---------------------------------------
 
-### Installing using a package manager
+
+### Downloading the V7 beta CLI
+
+**Important Note**: The v7 CF CLI beta under rapid development and as such is tested only against CC API v3 Release Candidate. Use at your own risk. See [releases](https://github.com/cloudfoundry/cli/releases) for more information. 
+
+#### Compatibility
+The V7 CLI is developed and tested against CAPI release candidates. The releases are only fully compatible with Capi RC [INSERT_VERSION_HERE](LINK_HERE)  or later.
+
+#### Installing using a package manager
 
 **Mac OS X** and **Linux** using [Homebrew](https://brew.sh/) via the [cloudfoundry tap](https://github.com/cloudfoundry/homebrew-tap):
 
@@ -134,7 +149,7 @@ sudo wget -O /etc/yum.repos.d/cloudfoundry-cli.repo https://packages.cloudfoundr
 sudo yum install cf7-cli
 ```
 
-### Installers and compressed binaries
+#### Installers and compressed binaries
 
 | | Mac OS X 64 bit | Windows 64 bit | Linux 64 bit |
 | :---------------: | :---------------: |:---------------:| :------------:|
@@ -157,12 +172,11 @@ sudo curl -o /usr/share/bash-completion/completions/cf7 https://raw.githubuserco
 cf7 --version
 ```
 
-#### Edge binaries
+##### Edge binaries
 Edge binaries are *not intended for wider use*; they're for developers to test new features and fixes as they are 'pushed' and passed through the CI.
 Follow these download links for [Mac OS X 64 bit](https://packages.cloudfoundry.org/edge?arch=macosx64&version=v7&source=github), [Windows 64 bit](https://packages.cloudfoundry.org/edge?arch=windows64&version=v7&source=github) and [Linux 64 bit](https://packages.cloudfoundry.org/edge?arch=linux64&version=v7&source=github).
 
-### Compatibility
-The V7 CLI is developed and tested against CAPI release candidates. The releases are only fully compatible with Capi RC [INSERT_VERSION_HERE](LINK_HERE)  or later.
+
 
 ## Known Issues
 
