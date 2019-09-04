@@ -6,7 +6,7 @@ import (
 	"reflect"
 
 	"code.cloudfoundry.org/cli/command/plugin"
-	"code.cloudfoundry.org/cli/command/v6"
+	v6 "code.cloudfoundry.org/cli/command/v6"
 )
 
 var Commands commandList
@@ -18,7 +18,7 @@ type V2CommandList struct {
 type commandList struct {
 	VerboseOrVersion bool `short:"v" long:"version" description:"verbose and version flag"`
 
-	App                                v6.V3AppCommand                              `command:"app" description:"Display health and status for an app"`
+	App                                v6.V3AppCommand                              `command:"v3-app" description:"Display health and status for an app"`
 	V3Apps                             v6.V3AppsCommand                             `command:"v3-apps" description:"List all apps in the target space"`
 	V3ApplyManifest                    v6.V3ApplyManifestCommand                    `command:"v3-apply-manifest" description:"Applies manifest properties to an application"`
 	V3CancelZdtPush                    v6.V3CancelZdtPushCommand                    `command:"v3-cancel-zdt-push" description:"Cancel the most recent deployment for an app"`
